@@ -23,7 +23,8 @@ import {
   writeConfig,
   logMessage,
   setPlaygroundMode,
-  SANDBOX_DIR
+  SANDBOX_DIR,
+  isVercel
 } from './src/backend/storage';
 import { initRepo } from './src/backend/init';
 import { getRepoStatus } from './src/backend/status';
@@ -1084,12 +1085,12 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
     res.status(500).json({
       success: false,
       message: err?.message || 'An internal server error occurred',
-      stack: process.env.NODE_ENV !== 'production' || process.env.VERCEL === '1' ? err?.stack : undefined
+      stack: process.env.NODE_ENV !== 'production' || isVercel ? err?.stack : undefined
     });
   });
 
   async function bootstrap() {
-    if (process.env.VERCEL !== '1') {
+    if (!isVercel) {
       if (process.env.NODE_ENV !== 'production') {
         const { createServer: createViteServer } = await import('vite');
         const vite = await createViteServer({

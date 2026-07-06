@@ -3,7 +3,7 @@ import path from 'path';
 import zlib from 'zlib';
 import crypto from 'crypto';
 
-const isVercel = process.env.VERCEL === '1' || 
+export const isVercel = process.env.VERCEL === '1' || 
                  !!process.env.VERCEL || 
                  process.env.NOW_REGION !== undefined || 
                  process.env.LAMBDA_TASK_ROOT !== undefined || 
