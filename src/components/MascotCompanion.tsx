@@ -23,6 +23,10 @@ interface MascotCompanionProps {
   activeTab: string;
   currentLessonId?: string;
   currentLessonTitle?: string;
+  refreshAll?: () => void;
+  setActiveTab?: (tab: string) => void;
+  showAlert?: (text: string, type: 'success' | 'error' | 'info') => void;
+  handleExportPDF?: () => void;
 }
 
 interface ChatHistoryMessage {
@@ -31,12 +35,38 @@ interface ChatHistoryMessage {
   timestamp: string;
 }
 
+// Robust helper to parse custom action buttons from LLM responses
+const parseActions = (text: string): { cleanText: string; actions: { type: string; label: string }[] } => {
+  const actions: { type: string; label: string }[] = [];
+  const regex = /\[action:([\s\S]*?)\]/g;
+  let match;
+  let cleanText = text;
+  
+  while ((match = regex.exec(text)) !== null) {
+    const fullInner = match[1];
+    const lastColonIndex = fullInner.lastIndexOf(':');
+    if (lastColonIndex !== -1) {
+      const type = fullInner.substring(0, lastColonIndex).trim();
+      const label = fullInner.substring(lastColonIndex + 1).trim();
+      actions.push({ type, label });
+    }
+  }
+  
+  // Clean all [action:...] blocks from the displayed text
+  cleanText = cleanText.replace(/\[action:([\s\S]*?)\]/g, '').trim();
+  return { cleanText, actions };
+};
+
 export function MascotCompanion({
   status,
   files,
   activeTab,
   currentLessonId,
-  currentLessonTitle
+  currentLessonTitle,
+  refreshAll,
+  setActiveTab,
+  showAlert,
+  handleExportPDF
 }: MascotCompanionProps) {
   // UI and Chat states
   const [isOpen, setIsOpen] = useState(false);
@@ -84,6 +114,122 @@ export function MascotCompanion({
   const animationFrameRef = useRef<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const synthesisUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+  // Background action execution state & handler for 100% accurate user support
+  const [isExecutingAction, setIsExecutingAction] = useState<string | null>(null);
+
+  const triggerAction = async (actionType: string, buttonLabel: string) => {
+    setIsExecutingAction(actionType);
+    setPose('thinking');
+    
+    const token = localStorage.getItem('gc_session_token');
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+      headers['x-session-token'] = token;
+    }
+
+    try {
+      let endpoint = '';
+      let body: any = null;
+      let successMessage = '';
+      
+      if (actionType === 'init') {
+        endpoint = '/api/init';
+        body = {};
+        successMessage = "I've successfully initialized your sandbox repository. Let's start tracking some files!";
+      } else if (actionType === 'stage-all') {
+        endpoint = '/api/track';
+        body = {}; // empty stages all files
+        successMessage = "I've successfully staged all your modified files in the staging area.";
+      } else if (actionType.startsWith('commit:')) {
+        const msg = actionType.substring(7);
+        endpoint = '/api/commit';
+        body = { message: msg, author: 'Branchy' };
+        successMessage = `I've successfully created a new commit snapshot with message: "${msg}".`;
+      } else if (actionType.startsWith('checkout:')) {
+        const target = actionType.substring(9);
+        endpoint = '/api/checkout';
+        body = { target, force: true };
+        successMessage = `I've checked out "${target}" and updated your working directory workspace.`;
+      } else if (actionType.startsWith('create-branch:')) {
+        const name = actionType.substring(14);
+        endpoint = '/api/branch';
+        body = { name };
+        successMessage = `I've successfully created a new branch named "${name}".`;
+      } else if (actionType === 'trigger-conflict') {
+        endpoint = '/api/playground/trigger-conflict';
+        body = {};
+        successMessage = "I've triggered a merge conflict in your playground files! Check the red highlighted files.";
+      } else if (actionType === 'reset-playground') {
+        endpoint = '/api/playground/reset';
+        body = {};
+        successMessage = "I've fully reset the sandbox playground workspace back to its original clean state.";
+      } else if (actionType === 'export-pdf') {
+        if (handleExportPDF) {
+          handleExportPDF();
+          successMessage = "I've successfully generated and downloaded your visual PDF Audit Report!";
+        } else {
+          throw new Error("PDF generation module is currently busy or unlinked.");
+        }
+      } else if (actionType.startsWith('switch-tab:')) {
+        const tabName = actionType.substring(11);
+        if (setActiveTab) {
+          setActiveTab(tabName);
+          successMessage = `Switched you over to the "${tabName}" panel!`;
+        }
+      }
+
+      if (endpoint) {
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers,
+          body: body ? JSON.stringify(body) : undefined
+        });
+        const data = await res.json();
+        if (!data.success) {
+          throw new Error(data.message || 'Action execution failed');
+        }
+      }
+
+      setPose('happy');
+      speakText(successMessage);
+      if (showAlert) {
+        showAlert(successMessage, 'success');
+      }
+
+      setChatHistory(prev => [
+        ...prev,
+        {
+          role: 'model',
+          text: `🐾 *Happy fox spin!* I successfully ran: **${buttonLabel}**!\n\n${successMessage}`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }
+      ]);
+
+      if (refreshAll) {
+        refreshAll();
+      }
+    } catch (err: any) {
+      console.error(err);
+      setPose('idle');
+      const errMsg = `Failed to run action: ${err.message || err}`;
+      speakText(errMsg);
+      if (showAlert) {
+        showAlert(errMsg, 'error');
+      }
+      setChatHistory(prev => [
+        ...prev,
+        {
+          role: 'model',
+          text: `Oh whiskers! I ran into an error trying to **${buttonLabel}**: *${err.message || err}*`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }
+      ]);
+    } finally {
+      setIsExecutingAction(null);
+    }
+  };
 
   // Track page interaction for sleeping state
   useEffect(() => {
@@ -1146,13 +1292,42 @@ export function MascotCompanion({
                           <span>{msg.timestamp}</span>
                         </div>
                         <div
-                          className={`p-2.5 max-w-[85%] border border-[#141414] shadow-[2px_2px_0px_#141414] ${
+                          className={`p-2.5 max-w-[85%] border border-[#141414] shadow-[2px_2px_0px_#141414] flex flex-col ${
                             msg.role === 'user'
                               ? 'bg-[#141414] text-[#E4E3E0] font-semibold'
                               : 'bg-white text-[#141414] font-serif italic leading-relaxed'
                           }`}
                         >
-                          {msg.text}
+                          {(() => {
+                            if (msg.role === 'user') {
+                              return <div className="whitespace-pre-wrap">{msg.text}</div>;
+                            }
+                            
+                            const { cleanText, actions } = parseActions(msg.text);
+                            return (
+                              <>
+                                <div className="whitespace-pre-wrap">{cleanText}</div>
+                                {actions.length > 0 && (
+                                  <div className="mt-2.5 pt-2 border-t border-[#141414]/10 flex flex-wrap gap-1.5 select-none not-italic font-mono">
+                                    {actions.map((act, index) => (
+                                      <button
+                                        key={index}
+                                        disabled={isExecutingAction !== null}
+                                        onClick={() => triggerAction(act.type, act.label)}
+                                        className={`flex items-center gap-1 px-2 py-1 text-[9px] font-bold uppercase transition border border-[#141414] shadow-[1.5px_1.5px_0px_#141414] active:translate-x-[0.5px] active:translate-y-[0.5px] active:shadow-[0.5px_0.5px_0px_#141414] cursor-pointer ${
+                                          isExecutingAction === act.type
+                                            ? 'bg-zinc-200 text-zinc-500 animate-pulse'
+                                            : 'bg-orange-500 text-white hover:bg-orange-600'
+                                        }`}
+                                      >
+                                        {isExecutingAction === act.type ? 'Running...' : act.label}
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </>
+                            );
+                          })()}
                         </div>
                       </div>
                     ))}
@@ -1179,6 +1354,38 @@ export function MascotCompanion({
                       <Info className="w-2.5 h-2.5 text-orange-600" />
                       Context Hint
                     </button>
+
+                    {/* Highly Interactive Fast Actions */}
+                    {status?.isInitialized && (
+                      <>
+                        <button
+                          disabled={isExecutingAction !== null}
+                          onClick={() => triggerAction('stage-all', 'Stage All')}
+                          className="px-2 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-600 hover:bg-emerald-100 rounded-full text-[9px] font-mono shrink-0 flex items-center gap-0.5"
+                        >
+                          <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+                          Stage All
+                        </button>
+                        <button
+                          disabled={isExecutingAction !== null}
+                          onClick={() => triggerAction('export-pdf', 'Export PDF')}
+                          className="px-2 py-0.5 bg-sky-50 text-sky-800 border border-sky-600 hover:bg-sky-100 rounded-full text-[9px] font-mono shrink-0 flex items-center gap-0.5"
+                          title="Generate visual PDF Report"
+                        >
+                          <span className="w-1.5 h-1.5 bg-sky-500 rounded-full" />
+                          Export PDF
+                        </button>
+                        <button
+                          disabled={isExecutingAction !== null}
+                          onClick={() => triggerAction('trigger-conflict', 'Trigger Conflict')}
+                          className="px-2 py-0.5 bg-rose-50 text-rose-800 border border-rose-600 hover:bg-rose-100 rounded-full text-[9px] font-mono shrink-0 flex items-center gap-0.5"
+                        >
+                          <span className="w-1.5 h-1.5 bg-rose-500 rounded-full animate-pulse" />
+                          Trigger Conflict
+                        </button>
+                      </>
+                    )}
+
                     <button
                       onClick={() => handleQuickQuestion("Explain Git branches simply")}
                       className="px-2 py-0.5 bg-white border border-[#141414]/20 hover:border-[#141414] rounded-full text-[9px] font-mono hover:bg-[#D9D8D5]/50 shrink-0"

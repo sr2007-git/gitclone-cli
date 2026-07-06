@@ -2296,8 +2296,21 @@ export default function App() {
                       <h2 className="text-xl font-mono font-bold uppercase text-[#141414]">Sandbox Working Directory</h2>
                       <p className="text-xs font-serif italic text-zinc-700">Add, edit, or delete mock files directly inside your working directory sandbox.</p>
                     </div>
-                    <div className="text-xs font-mono bg-[#141414] text-[#E4E3E0] px-3.5 py-2 border border-[#141414] shadow-[2px_2px_0px_#888888]">
-                      Path: <span className="font-bold">./sandbox/</span>
+                    <div className="flex flex-wrap items-center gap-3">
+                      {status?.isInitialized && (
+                        <button
+                          onClick={handleExportPDF}
+                          disabled={isLoading}
+                          className="px-3.5 py-2 bg-[#E4E3E0] text-[#141414] hover:bg-zinc-200 text-xs font-mono font-bold uppercase border border-[#141414] shadow-[3px_3px_0px_#141414] flex items-center gap-1.5 transition cursor-pointer"
+                          title="Generate and download a comprehensive visual PDF Report of repository snapshot state"
+                        >
+                          <FileText className="w-3.5 h-3.5 text-emerald-700" />
+                          <span>Export PDF Report</span>
+                        </button>
+                      )}
+                      <div className="text-xs font-mono bg-[#141414] text-[#E4E3E0] px-3.5 py-2 border border-[#141414] shadow-[2px_2px_0px_#888888]">
+                        Path: <span className="font-bold">./sandbox/</span>
+                      </div>
                     </div>
                   </div>
 
@@ -2378,16 +2391,29 @@ export default function App() {
                       <h2 className="text-xl font-mono font-bold uppercase text-[#141414]">Repository Status</h2>
                       <p className="text-xs font-serif italic text-zinc-700">Compare your active disk directory against the staging index and latest commits.</p>
                     </div>
-                    {status && status.files.length > 0 && (
-                      <button
-                        onClick={() => handleTrackFile()}
-                        className="px-4 py-2 bg-[#141414] text-[#E4E3E0] hover:opacity-95 text-xs font-mono uppercase font-bold border border-[#141414] shadow-[2px_2px_0px_#888888] transition flex items-center gap-1.5 self-start sm:self-auto"
-                        id="stage-all-btn"
-                      >
-                        <CheckCircle className="w-4 h-4" />
-                        Stage All Changes (git add .)
-                      </button>
-                    )}
+                    <div className="flex flex-wrap items-center gap-3">
+                      {status?.isInitialized && (
+                        <button
+                          onClick={handleExportPDF}
+                          disabled={isLoading}
+                          className="px-4 py-2 bg-[#E4E3E0] text-[#141414] hover:bg-zinc-200 text-xs font-mono font-bold uppercase border border-[#141414] shadow-[3px_3px_0px_#141414] flex items-center gap-1.5 transition cursor-pointer"
+                          title="Generate and download a comprehensive visual PDF Report"
+                        >
+                          <FileText className="w-3.5 h-3.5 text-emerald-700" />
+                          <span>Export PDF Report</span>
+                        </button>
+                      )}
+                      {status && status.files.length > 0 && (
+                        <button
+                          onClick={() => handleTrackFile()}
+                          className="px-4 py-2 bg-[#141414] text-[#E4E3E0] hover:opacity-95 text-xs font-mono uppercase font-bold border border-[#141414] shadow-[2px_2px_0px_#888888] transition flex items-center gap-1.5 self-start sm:self-auto"
+                          id="stage-all-btn"
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                          Stage All Changes (git add .)
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {!status || status.files.length === 0 ? (
@@ -2873,6 +2899,17 @@ export default function App() {
                       <h2 className="text-xl font-mono font-bold uppercase text-[#141414]">Branch Manager</h2>
                       <p className="text-xs font-serif italic text-zinc-700">Spawn independent development tracks, delete stale heads, and switch context seamlessly.</p>
                     </div>
+                    {status?.isInitialized && (
+                      <button
+                        onClick={handleExportPDF}
+                        disabled={isLoading}
+                        className="px-4 py-2 bg-[#E4E3E0] text-[#141414] hover:bg-zinc-200 text-xs font-mono font-bold uppercase border border-[#141414] shadow-[3px_3px_0px_#141414] flex items-center gap-1.5 transition cursor-pointer"
+                        title="Download a complete visual PDF Audit Report of files, branches, and commits"
+                      >
+                        <FileText className="w-3.5 h-3.5 text-emerald-700" />
+                        <span>Export PDF Report</span>
+                      </button>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -2996,6 +3033,17 @@ export default function App() {
                       <h2 className="text-xl font-mono font-bold uppercase text-[#141414]">Tag Manager</h2>
                       <p className="text-xs font-serif italic text-zinc-700">Attach immutable lightweight tags to specific commits for easy version referencing.</p>
                     </div>
+                    {status?.isInitialized && (
+                      <button
+                        onClick={handleExportPDF}
+                        disabled={isLoading}
+                        className="px-4 py-2 bg-[#E4E3E0] text-[#141414] hover:bg-zinc-200 text-xs font-mono font-bold uppercase border border-[#141414] shadow-[3px_3px_0px_#141414] flex items-center gap-1.5 transition cursor-pointer"
+                        title="Download a complete visual PDF Audit Report of files, branches, and commits"
+                      >
+                        <FileText className="w-3.5 h-3.5 text-emerald-700" />
+                        <span>Export PDF Report</span>
+                      </button>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -3159,6 +3207,17 @@ export default function App() {
                       <h2 className="text-xl font-mono font-bold uppercase text-[#141414]">Line-by-Line Difference Viewer</h2>
                       <p className="text-xs font-serif italic text-zinc-700">Analyze modifications, line deletions, and text additions across historical snapshots.</p>
                     </div>
+                    {status?.isInitialized && (
+                      <button
+                        onClick={handleExportPDF}
+                        disabled={isLoading}
+                        className="px-4 py-2 bg-[#E4E3E0] text-[#141414] hover:bg-zinc-200 text-xs font-mono font-bold uppercase border border-[#141414] shadow-[3px_3px_0px_#141414] flex items-center gap-1.5 transition cursor-pointer"
+                        title="Download a complete visual PDF Audit Report of files, branches, and commits"
+                      >
+                        <FileText className="w-3.5 h-3.5 text-emerald-700" />
+                        <span>Export PDF Report</span>
+                      </button>
+                    )}
                   </div>
 
                   <div className="bg-[#D9D8D5]/30 border border-[#141414] p-4 flex flex-wrap gap-4 items-end shadow-[4px_4px_0px_#141414]">
@@ -4431,6 +4490,10 @@ export default function App() {
         activeTab={activeTab}
         currentLessonId={activeSubTab === 'lessons' && currentLessonIndex !== -1 ? LEARN_LESSONS[currentLessonIndex]?.id : undefined}
         currentLessonTitle={activeSubTab === 'lessons' && currentLessonIndex !== -1 ? LEARN_LESSONS[currentLessonIndex]?.title : undefined}
+        refreshAll={refreshAll}
+        setActiveTab={setActiveTab}
+        showAlert={showAlert}
+        handleExportPDF={handleExportPDF}
       />
 
     </div>
