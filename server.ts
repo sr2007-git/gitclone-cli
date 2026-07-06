@@ -1,7 +1,6 @@
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
-import { createServer as createViteServer } from 'vite';
 import AdmZip from 'adm-zip';
 
 // Import our modular VCS backend code
@@ -766,7 +765,7 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
         const stagedHash = index[filePath];
         textA = stagedHash ? readObject(stagedHash) : '';
 
-        const fullPath = path.join(path.resolve(process.cwd(), 'sandbox'), filePath);
+        const fullPath = path.join(SANDBOX_DIR, filePath);
         if (fs.existsSync(fullPath)) {
           textB = fs.readFileSync(fullPath, 'utf-8');
         } else {
@@ -1022,11 +1021,10 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
   // Reset Playground Repository
   app.post('/api/playground/reset', (req, res) => {
     try {
-      const playgroundDir = path.resolve(process.cwd(), 'sandbox_playground');
-      if (fs.existsSync(playgroundDir)) {
-        fs.rmSync(playgroundDir, { recursive: true, force: true });
-      }
       setPlaygroundMode(true);
+      if (fs.existsSync(SANDBOX_DIR)) {
+        fs.rmSync(SANDBOX_DIR, { recursive: true, force: true });
+      }
       ensureSandboxExists();
       res.json({ success: true, message: 'Playground repository has been reset.' });
     } catch (e: any) {
@@ -1093,6 +1091,7 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
   async function bootstrap() {
     if (process.env.VERCEL !== '1') {
       if (process.env.NODE_ENV !== 'production') {
+        const { createServer: createViteServer } = await import('vite');
         const vite = await createViteServer({
           server: { middlewareMode: true },
           appType: 'spa'

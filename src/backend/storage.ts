@@ -3,7 +3,12 @@ import path from 'path';
 import zlib from 'zlib';
 import crypto from 'crypto';
 
-const isVercel = process.env.VERCEL === '1' || !!process.env.VERCEL || process.env.NOW_REGION !== undefined;
+const isVercel = process.env.VERCEL === '1' || 
+                 !!process.env.VERCEL || 
+                 process.env.NOW_REGION !== undefined || 
+                 process.env.LAMBDA_TASK_ROOT !== undefined || 
+                 process.env.VERCEL_ENV !== undefined ||
+                 process.cwd() === '/var/task';
 const baseDir = isVercel ? '/tmp' : process.cwd();
 
 export let SANDBOX_DIR = path.resolve(baseDir, 'sandbox');
