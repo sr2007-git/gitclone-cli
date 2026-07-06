@@ -1,0 +1,6 @@
+{
+  "name": "GitClone",
+  "description": "A fully functional, Git-inspired version control system with content hashing, staging, committing, branch management, status tracking, time travel checkout, and custom diffing.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
