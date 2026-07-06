@@ -92,31 +92,8 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
   // Auth Middleware
   const requireAuth = (req: express.Request, res: express.Response, next: express.NextFunction) => {
-    // Allow public auth endpoints and health check
-    const isAuthPath = req.path.startsWith('/auth/') || req.path.startsWith('/api/auth/') || req.path.includes('/auth/');
-    const isHealthPath = req.path === '/health' || req.path === '/api/health' || req.path.endsWith('/health');
-    const isPlayground = req.headers['x-is-playground'] === 'true' || req.query.playground === 'true';
-    
-    if (isPlayground || isAuthPath || isHealthPath) {
-      return next();
-    }
-    
-    const token = getSessionCookie(req);
-    if (!token) {
-      res.status(401).json({ success: false, message: 'Authentication required' });
-      return;
-    }
-    
-    const session = sessionStore.get(token);
-    if (!session || session.expires < Date.now()) {
-      if (session) sessionStore.delete(token); // clean up expired
-      res.status(401).json({ success: false, message: 'Session expired or invalid' });
-      return;
-    }
-    
-    // Extend session expiry on activity (2 hours)
-    session.expires = Date.now() + 2 * 60 * 60 * 1000;
-    next();
+    // Direct Access bypass: always allow requests to proceed without authentication
+    return next();
   };
 
   // Register Playground context middleware FIRST
@@ -158,20 +135,8 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
   });
 
   app.get('/api/auth/session', (req, res) => {
-    const token = getSessionCookie(req);
-    if (!token) {
-      res.json({ success: false, message: 'No active session' });
-      return;
-    }
-    
-    const session = sessionStore.get(token);
-    if (!session || session.expires < Date.now()) {
-      if (session) sessionStore.delete(token);
-      res.json({ success: false, message: 'Session expired or invalid' });
-      return;
-    }
-    
-    res.json({ success: true, username: session.username });
+    // Direct Access bypass: always return active session for developer
+    res.json({ success: true, username: 'developer' });
   });
 
   app.post('/api/auth/logout', (req, res) => {
