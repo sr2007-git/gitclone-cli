@@ -204,8 +204,8 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
     next();
   };
 
-  // Ensure the sandbox folder with sample files is created at startup
-  ensureSandboxExists();
+  // Ensure the sandbox folder with sample files is created at startup (handled dynamically via request middleware)
+  // ensureSandboxExists();
 
   // ==================== API ENDPOINTS ====================
 
