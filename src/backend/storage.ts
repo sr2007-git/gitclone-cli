@@ -3,7 +3,7 @@ import path from 'path';
 import zlib from 'zlib';
 import crypto from 'crypto';
 
-const isVercel = process.env.VERCEL === '1';
+const isVercel = process.env.VERCEL === '1' || !!process.env.VERCEL || process.env.NOW_REGION !== undefined;
 const baseDir = isVercel ? '/tmp' : process.cwd();
 
 export let SANDBOX_DIR = path.resolve(baseDir, 'sandbox');
@@ -140,14 +140,18 @@ export function isIgnored(filePath: string, ignorePatterns: string[]): boolean {
 
 // Low level helpers
 export function ensureSandboxExists(): void {
-  if (!fs.existsSync(SANDBOX_DIR)) {
-    fs.mkdirSync(SANDBOX_DIR, { recursive: true });
-    // Write some initial sample files for the playground
-    fs.writeFileSync(path.join(SANDBOX_DIR, 'main.js'), `// Welcome to GitClone sandbox!\nconsole.log("Hello, GitClone!");\n`);
-    fs.writeFileSync(path.join(SANDBOX_DIR, 'readme.md'), `# My Sample Project\n\nThis is a sample project managed by GitClone.\nModify files and track changes!\n`);
-    const docsDir = path.join(SANDBOX_DIR, 'docs');
-    fs.mkdirSync(docsDir, { recursive: true });
-    fs.writeFileSync(path.join(docsDir, 'about.txt'), `GitClone is an elegant, content-addressed VCS.\nWritten in pure TypeScript.\n`);
+  try {
+    if (!fs.existsSync(SANDBOX_DIR)) {
+      fs.mkdirSync(SANDBOX_DIR, { recursive: true });
+      // Write some initial sample files for the playground
+      fs.writeFileSync(path.join(SANDBOX_DIR, 'main.js'), `// Welcome to GitClone sandbox!\nconsole.log("Hello, GitClone!");\n`);
+      fs.writeFileSync(path.join(SANDBOX_DIR, 'readme.md'), `# My Sample Project\n\nThis is a sample project managed by GitClone.\nModify files and track changes!\n`);
+      const docsDir = path.join(SANDBOX_DIR, 'docs');
+      fs.mkdirSync(docsDir, { recursive: true });
+      fs.writeFileSync(path.join(docsDir, 'about.txt'), `GitClone is an elegant, content-addressed VCS.\nWritten in pure TypeScript.\n`);
+    }
+  } catch (error) {
+    console.error('Failed to ensure sandbox exists:', error);
   }
 }
 

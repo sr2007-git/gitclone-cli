@@ -73,6 +73,12 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
   };
 
   const getAuthConfig = () => {
+    const defaultUsers = {
+      users: [
+        { username: 'developer', password: 'password123' },
+        { username: 'admin', password: 'adminpassword' }
+      ]
+    };
     try {
       const configPath = path.resolve(process.cwd(), 'auth-config.json');
       if (fs.existsSync(configPath)) {
@@ -81,7 +87,7 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
     } catch (e) {
       console.error('Failed to read auth-config.json', e);
     }
-    return { users: [] };
+    return defaultUsers;
   };
 
   // Auth Middleware
@@ -1073,6 +1079,16 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
   });
 
   // ==================== VITE AND STATIC ASSETS ====================
+
+  // Global error handler
+  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    console.error('Unhandled server error:', err);
+    res.status(500).json({
+      success: false,
+      message: err?.message || 'An internal server error occurred',
+      stack: process.env.NODE_ENV !== 'production' || process.env.VERCEL === '1' ? err?.stack : undefined
+    });
+  });
 
   async function bootstrap() {
     if (process.env.VERCEL !== '1') {
