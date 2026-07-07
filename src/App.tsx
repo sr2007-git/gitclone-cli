@@ -169,8 +169,8 @@ export default function App() {
   }, []);
 
   // Authentication States
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(true);
-  const [currentUser, setCurrentUser] = useState<string | null>('developer');
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [currentUser, setCurrentUser] = useState<string | null>(null);
   const [loginUsername, setLoginUsername] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
@@ -405,10 +405,9 @@ export default function App() {
     } catch (e) {
       console.error('Session check failed', e);
     }
-    setIsAuthenticated(true);
-    setCurrentUser('developer');
-    setActiveTab((prev) => (prev === 'landing' || prev === 'login' || prev === 'developer-login' ? 'dashboard' : prev));
-    return true;
+    setIsAuthenticated(false);
+    setCurrentUser(null);
+    return false;
   }, []);
 
   const handleQuickLogin = async () => {
@@ -1584,7 +1583,7 @@ export default function App() {
 
             <div className="pt-4 sm:pt-6">
               <button
-                onClick={() => setActiveTab('login')}
+                onClick={handleQuickLogin}
                 className="px-8 py-4 bg-[#141414] hover:bg-zinc-800 text-[#E4E3E0] font-mono uppercase tracking-widest text-xs font-bold border border-[#141414] shadow-[4px_4px_0px_#888888] hover:translate-y-[1px] hover:shadow-[3px_3px_0px_#888888] active:translate-y-[3px] active:shadow-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#D35400] outline-none transition duration-150 cursor-pointer"
                 id="hero-workspace-cta-button"
               >
@@ -1612,11 +1611,11 @@ export default function App() {
                   variants={reducedMotion ? undefined : cardVariants}
                   tabIndex={0}
                   className="bg-[#F0EFED] border border-[#141414] p-5 shadow-[4px_4px_0px_#141414] space-y-2 focus-visible:ring-2 focus-visible:ring-[#D35400] focus-visible:ring-offset-1 outline-none group hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#141414] transition-all duration-200 cursor-pointer"
-                  onClick={() => setActiveTab('login')}
+                  onClick={handleQuickLogin}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault();
-                      setActiveTab('login');
+                      handleQuickLogin();
                     }
                   }}
                   id={`capability-card-${i}`}
@@ -1638,7 +1637,7 @@ export default function App() {
           </p>
           <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-4">
             <button
-              onClick={() => setActiveTab('login')}
+              onClick={handleQuickLogin}
               className="px-8 py-4 bg-[#141414] hover:bg-zinc-800 text-[#E4E3E0] font-mono uppercase tracking-widest text-xs font-bold border border-[#141414] shadow-[4px_4px_0px_#888888] hover:translate-y-[1px] hover:shadow-[3px_3px_0px_#888888] active:translate-y-[3px] active:shadow-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#D35400] outline-none transition duration-150 cursor-pointer w-full sm:w-auto"
               id="bottom-login-cta-button"
             >
@@ -1836,8 +1835,8 @@ export default function App() {
           <div className="flex items-center gap-2.5 sm:gap-4">
             {activeTab === 'landing' ? (
               <button
-                onClick={() => setActiveTab('login')}
-                className="px-4 py-2 bg-[#141414] text-[#E4E3E0] hover:bg-zinc-800 text-xs font-mono font-bold uppercase border border-[#141414] shadow-[2px_2px_0px_#888888] cursor-pointer"
+                onClick={handleQuickLogin}
+                className="px-4 py-2 bg-[#141414] text-[#E4E3E0] hover:bg-zinc-800 text-xs font-mono font-bold uppercase border border-[#141414] shadow-[2px_2px_0px_#888888] cursor-pointer animate-pulse"
               >
                 Login
               </button>
@@ -2179,16 +2178,47 @@ export default function App() {
                 + New Sandbox File
               </button>
               {status?.isInitialized && (
-                <button
-                  onClick={handleExportPDF}
-                  disabled={isLoading}
-                  className="w-full py-2.5 bg-[#E4E3E0] text-[#141414] hover:bg-zinc-200 text-[10px] font-mono font-bold uppercase border border-[#141414] shadow-[3px_3px_0px_#141414] flex items-center justify-center gap-1.5 transition cursor-pointer"
-                  id="sidebar-export-pdf-btn"
-                  title="Generate a beautiful PDF Report containing working status, logs, database snapshot meta"
-                >
-                  <FileText className="w-3.5 h-3.5 text-emerald-700" />
-                  <span>Export PDF Report</span>
-                </button>
+                <>
+                  <button
+                    onClick={handleExportPDF}
+                    disabled={isLoading}
+                    className="w-full py-2.5 bg-[#E4E3E0] text-[#141414] hover:bg-zinc-200 text-[10px] font-mono font-bold uppercase border border-[#141414] shadow-[3px_3px_0px_#141414] flex items-center justify-center gap-1.5 transition cursor-pointer"
+                    id="sidebar-export-pdf-btn"
+                    title="Generate a beautiful PDF Report containing working status, logs, database snapshot meta"
+                  >
+                    <FileText className="w-3.5 h-3.5 text-emerald-700" />
+                    <span>Export PDF Report</span>
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (confirm('Are you sure you want to completely reset and recreate your sandbox repository? All custom files, branches, and commit histories will be permanently deleted.')) {
+                        setIsLoading(true);
+                        try {
+                          await fetch('/api/playground/reset', { method: 'POST' });
+                          const res = await fetch('/api/init', { method: 'POST' });
+                          const data = await res.json();
+                          if (data.success) {
+                            showAlert('Sandbox successfully reset and re-initialized with a clean slate!', 'success');
+                            refreshAll();
+                          } else {
+                            showAlert(data.message, 'error');
+                          }
+                        } catch (e: any) {
+                          showAlert(`Reset failed: ${e.message}`, 'error');
+                        } finally {
+                          setIsLoading(false);
+                        }
+                      }
+                    }}
+                    disabled={isLoading}
+                    className="w-full py-2.5 bg-rose-50 text-rose-800 hover:bg-rose-100 text-[10px] font-mono uppercase tracking-wider border border-rose-300 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                    id="sidebar-reset-repo-btn"
+                    title="Completely reset and recreate your sandbox working directory"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-rose-700" />
+                    <span>Reset/Recreate Sandbox</span>
+                  </button>
+                </>
               )}
               <div className="flex items-start gap-2.5 pt-1">
                 <input

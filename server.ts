@@ -135,8 +135,15 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
   });
 
   app.get('/api/auth/session', (req, res) => {
-    // Direct Access bypass: always return active session for developer
-    res.json({ success: true, username: 'developer' });
+    const token = getSessionCookie(req);
+    if (token) {
+      const session = sessionStore.get(token);
+      if (session && session.expires > Date.now()) {
+        res.json({ success: true, username: session.username });
+        return;
+      }
+    }
+    res.json({ success: false, message: 'No active session' });
   });
 
   app.post('/api/auth/logout', (req, res) => {
